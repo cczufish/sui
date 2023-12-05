@@ -15,6 +15,8 @@ use std::sync::Arc;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tokio::time::{self, Duration};
+use tokio_retry::strategy::{jitter, ExponentialBackoff};
+use tokio_retry::Retry;
 
 const ETH_EVENTS_CHANNEL_SIZE: usize = 1000;
 const FINALIZED_BLOCK_QUERY_INTERVAL: Duration = Duration::from_secs(2);
@@ -138,27 +140,11 @@ where
                     .send(events)
                     .await
                     .expect("All Eth event channel receivers are closed");
-                tracing::info!(
-                    contract_address=?contract_address,
-                    "Observed {len} new events",
-                );
+                tracing::info!(?contract_address, "Observed {len} new Eth events",);
             }
             start_block = new_finalized_block + 1;
         }
     }
-}
-
-use tokio_retry::strategy::{jitter, ExponentialBackoff};
-use tokio_retry::Retry;
-
-#[macro_export]
-macro_rules! retry_with_max_delay {
-    ($func:expr, $max_delay:expr) => {{
-        let retry_strategy = ExponentialBackoff::from_millis(100)
-            .max_delay($max_delay)
-            .map(jitter);
-        Retry::spawn(retry_strategy, || $func).await
-    }};
 }
 
 #[cfg(test)]
