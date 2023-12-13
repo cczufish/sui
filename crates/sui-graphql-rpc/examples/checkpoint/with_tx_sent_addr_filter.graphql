@@ -14,7 +14,7 @@
         node {
           digest
           sender {
-            address
+            location
           }
           expiration {
             epochId
